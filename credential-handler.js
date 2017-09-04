@@ -4,7 +4,7 @@
 /* global navigator */
 'use strict';
 
-import * as rpc from 'web-request-rpc';
+import {WebAppContext} from 'web-request-rpc';
 
 export async function activate(mediatorOrigin) {
   console.log('credential handler activating!');
@@ -38,7 +38,7 @@ function handleCredentialEvent(event) {
       // create proxy interface for making calls in WebApp
       const injector = await windowReady;
       const proxy = injector.get('credentialEventProxy', {
-        functions: ['send']
+        functions: [{name: 'send', timeout: 0}]
       });
 
       // WebApp running in window is ready; proxy event to it
