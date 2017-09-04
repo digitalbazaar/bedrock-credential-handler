@@ -4,13 +4,11 @@
 /* global navigator */
 'use strict';
 
-// TODO: expose some credential request and store classes?
 export {CredentialEventProxy} from './CredentialEventProxy.js';
 export {activate as activateHandler} from './credential-handler.js';
+export {ProfileKeyStore} from './ProfileKeyStore.js';
 
 export async function installHandler(handlerUrl) {
-  console.log('installing credential handler...');
-
   const CredentialManager = navigator.credentialsPolyfill.CredentialManager;
 
   // ensure permission has been granted to add a credential hint
@@ -24,13 +22,10 @@ export async function installHandler(handlerUrl) {
     throw new Error('Credential handler not registered.');
   }
 
-  console.log('credential handler installation complete.');
   return registration;
 }
 
 export async function uninstallHandler(handlerUrl) {
-  console.log('uninstalling credential handler...');
-
   const CredentialHandlers = navigator.credentialsPolyfill.CredentialHandlers;
   const CredentialManager = navigator.credentialsPolyfill.CredentialManager;
 
@@ -42,9 +37,6 @@ export async function uninstallHandler(handlerUrl) {
 
   // unregister credential handler registration
   await CredentialHandlers.unregister(handlerUrl);
-  console.log('credential handler unregistered');
-
-  console.log('credential handler uninstallation complete.');
 }
 
 export async function getHandlerRegistration(handlerUrl) {

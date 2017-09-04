@@ -17,10 +17,27 @@
   },
   "homepage": "https://github.com/digitalbazaar/bedrock-credential-handler",
   "dependencies": {
+    "jsonld-signatures": "digitalbazaar/jsonld-signatures#multiSignature",
     "localforage": "^1.5.0",
-    "web-request-rpc": "^0.1.0"
+    "node-forge": "^0.7.1",
+    "web-request-rpc": "^0.1.0",
+    "uuid": "^3.1.0"
   },
   "bedrock": {
-    "browserDependencies": "all"
+    "browserDependencies": "all",
+    "systemjs": {
+      "packages": {
+        "node-forge": {
+          "map": {
+            "crypto": "@empty"
+          }
+        },
+        "uuid": {
+          "map": {
+            "./lib/rng.js": "./lib/rng-browser.js"
+          }
+        }
+      }
+    }
   }
 }

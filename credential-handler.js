@@ -4,10 +4,12 @@
 /* global navigator */
 'use strict';
 
+import {ProfileKeyStore} from 'bedrock-credential-handler';
 import {WebAppContext} from 'web-request-rpc';
 
+const IDENTITY_CONTEXT = 'https://w3id.org/identity/v1';
+
 export async function activate(mediatorOrigin) {
-  console.log('credential handler activating!');
   const CredentialHandler = navigator.credentialsPolyfill.CredentialHandler;
   const self = new CredentialHandler(mediatorOrigin);
 
@@ -15,16 +17,24 @@ export async function activate(mediatorOrigin) {
   self.addEventListener('credentialstore', handleCredentialEvent);
 
   await self.connect();
-  console.log('credential handler connected');
 }
 
 function handleCredentialEvent(event) {
   event.respondWith(new Promise(async (resolve, reject) => {
     try {
-      if(event.type === 'credentialrequest') {
-        // TODO: if is a cryptokey request, do not use UI unless
-        // user has no such key available from localstorage
-        // TODO: handle and return early if key is in localstorage
+      // attempt to handle crypto key requests without UI
+      if(isCryptoKeyRequest(event)) {
+        const pkStore = new ProfileKeyStore(window.location.pathname);
+        const profile = await pkStore.get(event.hintKey);
+        if(profile) {
+          const domain = event.credentialRequestOrigin;
+          const vProfile = await pkStore.createCryptoKeyProfile(
+            {profile, domain, sign: true});
+          return resolve({
+            dataType: 'VerifiableProfile',
+            data: vProfile
+          });
+        }
       }
 
       // create WebAppContext to run WebApp and connect to windowClient
@@ -52,4 +62,19 @@ function handleCredentialEvent(event) {
       reject(e);
     }
   }));
+}
+
+function isCryptoKeyRequest(event) {
+  if(event.type !== 'credentialrequest') {
+    return false;
+  }
+  let query = event.credentialRequestOptions.web.VerifiableProfile;
+  if(query && typeof query === 'object') {
+    // query may have `id` set -- this doesn't affect whether or not it is
+    // a crypto key request
+    query = Object.assign({}, query);
+    delete query.id;
+    return query.publicKey === '' &&
+      (!('@context' in query) || query['@context'] === IDENTITY_CONTEXT);
+  }
 }
