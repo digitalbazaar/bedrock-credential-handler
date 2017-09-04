@@ -38,7 +38,7 @@ function handleCredentialEvent(event) {
       // create proxy interface for making calls in WebApp
       const injector = await windowReady;
       const proxy = injector.get('credentialEventProxy', {
-        functions: [{name: 'send', timeout: 0}]
+        functions: [{name: 'send', options: {timeout: 0}}]
       });
 
       // WebApp running in window is ready; proxy event to it

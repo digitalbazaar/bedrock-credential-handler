@@ -5,6 +5,7 @@
 'use strict';
 
 // TODO: expose some credential request and store classes?
+export {CredentialEventProxy} from './CredentialEventProxy.js';
 export {activate as activateHandler} from './credential-handler.js';
 
 export async function installHandler(handlerUrl) {
