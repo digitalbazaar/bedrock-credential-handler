@@ -1,16 +1,18 @@
 /*!
  * A ProfileKeyStore store profile and key information.
  *
- * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2017-2018 Digital Bazaar, Inc. All rights reserved.
  */
 'use strict';
 
+import didv1 from 'did-veres-one';
 import forge from 'node-forge';
 import localforage from 'localforage';
 import jsonld from 'jsonld';
 import uuid from 'uuid/v4';
 import Jsigs from 'jsonld-signatures';
 
+// TODO: `IDENTITY_CONTEXT` is deprecated; replace
 const IDENTITY_CONTEXT = 'https://w3id.org/identity/v1';
 
 export class ProfileKeyStore {
@@ -27,64 +29,23 @@ export class ProfileKeyStore {
     this.jsigs.use('jsonld', jsonld);
   }
 
-  async create({id, label, publicKeyPem, privateKeyPem}) {
-    if(!id) {
-      // TODO: use did:method
-      id = 'did:' + uuid();
+  async create({name, id, publicKey}) {
+    if(!publicKey) {
+      const {privateDidDocument} = await didv1.generate();
+      privateDidDocument.name = name;
+      return privateDidDocument;
     }
-    if(!publicKeyPem) {
-      const keys = await this.generateKeyPair();
-      publicKeyPem = forge.pki.publicKeyToPem(keys.publicKey);
-      privateKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
-    }
-    return {
-      '@context': 'https://w3id.org/identity/v1',
-      id: id,
-      label: label,
-      publicKey: {
-        id: id + '/keys/' + uuid(),
-        type: 'CryptographicKey',
-        owner: id,
-        publicKeyPem,
-        privateKeyPem
-      }
-    };
+
+    // TODO: support creating DID document from existing `publicKey`
+    throw new Error('Not implemented');
   }
 
-  /**
-   * Asynchronously generates a key pair.
-   *
-   * @return a Promise that resolves to a key pair.
-   */
-  async generateKeyPair() {
-    return new Promise(function(resolve, reject) {
-      forge.pki.rsa.generateKeyPair({
-        // TODO: change to config value
-        bits: 2048,
-        workerScript: '/modules/forge/lib/prime.worker.js'
-      }, function(err, keypair) {
-        if(err) {
-          return reject(err);
-        }
-        return resolve(keypair);
-      });
-    });
-  }
-
-  async sign({privateKeyPem, publicKeyId, doc, domain}) {
-    const options = {
-      algorithm: 'LinkedDataSignature2015',
-      privateKeyPem,
+  async sign({privateKeyBase58, publicKeyId, doc, domain}) {
+    return this.jsigs.sign(doc, {
+      algorithm: 'Ed25519Signature2018',
       creator: publicKeyId,
+      privateKeyBase58,
       domain
-    };
-    return new Promise((resolve, reject) => {
-      this.jsigs.sign(doc, options, (err, signed) => {
-        if(err) {
-          return reject(err);
-        }
-        resolve(signed);
-      });
     });
   }
 
@@ -100,7 +61,7 @@ export class ProfileKeyStore {
           id: profile.publicKey.id,
           type: 'CryptographicKey',
           owner: profile.id,
-          publicKeyPem: profile.publicKey.publicKeyPem
+          publicKeyBase58: profile.publicKey.publicKeyBase58
         }
       }
     };
@@ -108,7 +69,7 @@ export class ProfileKeyStore {
     const signedCredential = await this.sign({
       doc: credential,
       publicKeyId: profile.publicKey.id,
-      privateKeyPem: profile.publicKey.privateKeyPem,
+      privateKeyBase58: profile.publicKey.privateKeyBase58,
       domain: domain
     });
 
@@ -129,7 +90,7 @@ export class ProfileKeyStore {
       doc: unsignedProfile,
       domain: domain,
       publicKeyId: profile.publicKey.id,
-      privateKeyPem: profile.publicKey.privateKeyPem
+      privateKeyBase58: profile.publicKey.privateKeyBase58
     });
   }
 
