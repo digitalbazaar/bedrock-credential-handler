@@ -27,11 +27,21 @@ export class ProfileKeyStore {
     this.jsigs = Jsigs();
     this.jsigs.use('forge', forge);
     this.jsigs.use('jsonld', jsonld);
+    didv1.use('forge', forge);
+    didv1.use('jsonld', jsonld);
+    didv1.use('jsonld-signatures', this.jsigs);
   }
 
   async create({name, id, publicKey}) {
     if(!publicKey) {
-      const {privateDidDocument} = await didv1.generate();
+      const {privateDidDocument} = await didv1.generate({
+        name,
+        didType: 'nym',
+        keyType: 'Ed25519VerificationKey2018',
+        passphrase: null,
+        // TODO:
+        env: 'dev'
+      });
       privateDidDocument.name = name;
       return privateDidDocument;
     }
