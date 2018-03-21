@@ -14,6 +14,7 @@ import Jsigs from 'jsonld-signatures';
 
 // TODO: `IDENTITY_CONTEXT` is deprecated; replace
 const IDENTITY_CONTEXT = 'https://w3id.org/identity/v1';
+const SECURITY_CONTEXT = 'https://w3id.org/security/v2';
 
 export class ProfileKeyStore {
   constructor(handlerUrl) {
@@ -61,31 +62,41 @@ export class ProfileKeyStore {
 
   async createCryptoKeyProfile({profile, domain, sign}) {
     // wrap public key in a CryptographicKeyCredential and sign it
+    const publicKey = profile.authentication[0].publicKey[0];
     const credential = {
-      '@context': IDENTITY_CONTEXT,
+      '@context': [
+        {'@version': 1.1},
+        IDENTITY_CONTEXT,
+        SECURITY_CONTEXT
+      ],
       id: 'urn:ephemeral:' + uuid(),
       type: ['Credential', 'CryptographicKeyCredential'],
       claim: {
         id: profile.id,
         publicKey: {
-          id: profile.publicKey.id,
+          id: publicKey.id,
           type: 'CryptographicKey',
           owner: profile.id,
-          publicKeyBase58: profile.publicKey.publicKeyBase58
+          publicKeyBase58: publicKey.publicKeyBase58
         }
       }
     };
 
     const signedCredential = await this.sign({
       doc: credential,
-      publicKeyId: profile.publicKey.id,
-      privateKeyBase58: profile.publicKey.privateKeyBase58,
+      publicKeyId: publicKey.id,
+      privateKeyBase58: publicKey.privateKey.privateKeyBase58,
       domain: domain
     });
 
     const unsignedProfile = {
-      '@context': IDENTITY_CONTEXT,
+      '@context': [
+        {'@version': 1.1},
+        IDENTITY_CONTEXT,
+        SECURITY_CONTEXT
+      ],
       id: profile.id,
+      // TODO: use `verifiableCredential` and `credential/v2` context
       credential: [{
         '@graph': signedCredential
       }]
@@ -99,8 +110,8 @@ export class ProfileKeyStore {
     return await this.sign({
       doc: unsignedProfile,
       domain: domain,
-      publicKeyId: profile.publicKey.id,
-      privateKeyBase58: profile.publicKey.privateKeyBase58
+      publicKeyId: publicKey.id,
+      privateKeyBase58: publicKey.privateKey.privateKeyBase58
     });
   }
 
